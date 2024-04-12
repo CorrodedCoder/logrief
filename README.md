@@ -29,7 +29,7 @@ From a command prompt/terminal browse to the repository and run:
 
 The add-on should be generated as dist/packages/logrief.mcaddon
 
-Note: On Windows, you might need to run the following command under PowerShell in the repository directory before the NPM steps:
+**Note**: On Windows, you might need to run the following command under PowerShell in the repository directory before the NPM steps:
 `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`
 
 ## Developer convenience
