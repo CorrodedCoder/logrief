@@ -44,22 +44,20 @@ To install this on a Bedrock server takes a little more work, but roughly:
     development_behavior_packs\logrief\pack_icon.png
     development_behavior_packs\logrief\scripts
     development_behavior_packs\logrief\scripts\main.js
-4) Run your server and after it has started shut it down.
+4) Run your server and then shut it down.
 5) Open "valid_known_packs.json" in the root of your server directory and you should now see an entry at the top for logrief. Make a note of the uuid and version.
 6) Under your "worlds\Bedrock level" directory (you might have renamed "Bedrock level" or have more than one world there) you need to create a file called "world_behavior_packs.json". It should look like the following:
-```json
-[
-	
-	{
-		"pack_id" : "f939258b-12b5-4efc-962d-d59785525dfb",
-		"version" : [ 1, 0, 0 ]
-	}
-]
-```
-The `pack_id` should match the uuid you noted earlier and the version should also match. At the time of typing, the above is correct.
+
+        [
+            
+            {
+                "pack_id" : "f939258b-12b5-4efc-962d-d59785525dfb",
+                "version" : [ 1, 0, 0 ]
+            }
+        ]
+
+    The `pack_id` should match the uuid you noted earlier in step 5 and the version should also match that in step 5. At the time of typing, the above is correct.
 
 7) Restart your server. If all went well you should see the following in your server log:
 
-```text
         [Scripting] Logrief enabled...
-```
