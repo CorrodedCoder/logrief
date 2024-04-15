@@ -1,7 +1,7 @@
 import { world, system, TicksPerSecond, Player, ItemUseOnBeforeEvent, ItemUseBeforeEvent } from "@minecraft/server";
 import { ModalFormData } from "@minecraft/server-ui";
 
-let faux_operators: { [name: string]: boolean } = {};
+let fauxOperators: { [name: string]: boolean } = {};
 
 let options: { [opt: string]: any } = {
   lava_enabled: false,
@@ -11,9 +11,9 @@ let options: { [opt: string]: any } = {
   spawn_rate_limit: 20,
 };
 
-function add_faux_operator(player: Player) {
-  if( !(player.name in faux_operators)){
-    faux_operators[player.name]=true;
+function fauxOperatorAdd(player: Player) {
+  if( !(player.name in fauxOperators)){
+    fauxOperators[player.name]=true;
     system.run(() => {
       player.sendMessage(`logrief restrictions are now disabled for you`);
     });
@@ -21,9 +21,9 @@ function add_faux_operator(player: Player) {
   }
 }
 
-function remove_faux_operator(player: Player) {
-  if( player.name in faux_operators){
-    delete faux_operators[player.name];
+function fauxOperatorRemove(player: Player) {
+  if( player.name in fauxOperators){
+    delete fauxOperators[player.name];
     system.run(() => {
       player.sendMessage(`logrief restrictions are now enabled for you`);
     });
@@ -31,24 +31,24 @@ function remove_faux_operator(player: Player) {
   }
 }
 
-function is_operator(player: Player) {
+function isOperator(player: Player) {
   if( !player ){
     return false;
   }
   if( (player as any)?.isOp?.()){
     return true;
   }
-  return faux_operators[player.name] ?? false;
+  return fauxOperators[player.name] ?? false;
 }
 
 world.beforeEvents.itemUse.subscribe((event: ItemUseBeforeEvent) => {
   if (event.itemStack.typeId === "minecraft:command_block"){
     if(event.itemStack.nameTag === "logrief" ) {
       event.cancel = true;
-      add_faux_operator(event.source);
+      fauxOperatorAdd(event.source);
       system.run(() => {
         let form = new ModalFormData()
-        form.title("Logrief controls");
+          .title("Logrief controls");
         for (const [key, value] of Object.entries(options)) {
           if(typeof value === "boolean"){
             form.toggle(key, value);
@@ -72,7 +72,7 @@ world.beforeEvents.itemUse.subscribe((event: ItemUseBeforeEvent) => {
       });
     } else if (event.itemStack.nameTag === "nologrief" ) {
       event.cancel = true;
-      remove_faux_operator(event.source);
+      fauxOperatorRemove(event.source);
     }
   }
 });
@@ -87,14 +87,14 @@ world.beforeEvents.itemUseOn.subscribe((event: ItemUseOnBeforeEvent) => {
   }
 });
 
-function logrief_handle_spawn_egg(event: ItemUseOnBeforeEvent){
-  const spawn_rate = options["spawn_rate"];
-  if(spawn_rate < 0){
+function logriefHandleSpawnEgg(event: ItemUseOnBeforeEvent){
+  const spawnRate = options["spawn_rate"];
+  if(spawnRate < 0){
     // Unlimited spawning
     return;
   }
   const player = event.source;
-  if(spawn_rate == 0){
+  if(spawnRate == 0){
     event.cancel = true;
     system.run(() => {
       player.sendMessage(`Entity spawning is currently disabled...`);
@@ -105,7 +105,7 @@ function logrief_handle_spawn_egg(event: ItemUseOnBeforeEvent){
   const last_spawn_tick = Number(player.getDynamicProperty("last_spawn_tick") ?? currentTick);
   let spawn_count = Number(player.getDynamicProperty("spawn_count") ?? 0);
   const elapsed = (currentTick - last_spawn_tick) / TicksPerSecond;
-  const earned_spawn_tokens = elapsed / spawn_rate;
+  const earned_spawn_tokens = elapsed / spawnRate;
   spawn_count = Math.max(0, spawn_count - earned_spawn_tokens);
 
   if (spawn_count >= options["spawn_rate_limit"]) {
@@ -120,7 +120,7 @@ function logrief_handle_spawn_egg(event: ItemUseOnBeforeEvent){
   player.setDynamicProperty("last_spawn_tick", currentTick);
 }
 
-function logrief_handle_lava_bucket(event: ItemUseOnBeforeEvent){
+function logriefHandleLavaBucket(event: ItemUseOnBeforeEvent){
   if(!options["lava_enabled"]){
     event.cancel = true;
     system.run(() => {
@@ -130,7 +130,7 @@ function logrief_handle_lava_bucket(event: ItemUseOnBeforeEvent){
   }
 }
 
-function logrief_handle_spawner(event: ItemUseOnBeforeEvent){
+function logriefHandleSpawner(event: ItemUseOnBeforeEvent){
   if(!options["spawners_enabled"]){
     event.cancel = true;
     system.run(() => {
@@ -140,7 +140,7 @@ function logrief_handle_spawner(event: ItemUseOnBeforeEvent){
   }
 }
 
-function logrief_handle_potion(event: ItemUseBeforeEvent){
+function logriefHandlePotion(event: ItemUseBeforeEvent){
   if(!options["potions_enabled"]){
     event.cancel = true;
     const player = event.source;
@@ -151,25 +151,25 @@ function logrief_handle_potion(event: ItemUseBeforeEvent){
 }
 
 world.beforeEvents.itemUse.subscribe((event) => {
-  if (is_operator(event.source)) {
+  if (isOperator(event.source)) {
     return;
   }
   if (event.itemStack.typeId.includes("potion") ) {
-    logrief_handle_potion(event);
+    logriefHandlePotion(event);
   }
 });
 
 world.beforeEvents.itemUseOn.subscribe((event) => {
-  if (is_operator(event.source)) {
+  if (isOperator(event.source)) {
     return;
   }
 
   if (event.itemStack.typeId.endsWith("_spawn_egg") ) {
-    logrief_handle_spawn_egg(event);
+    logriefHandleSpawnEgg(event);
   } else if (event.itemStack.typeId.includes("spawner")) {
-    logrief_handle_spawner(event);
+    logriefHandleSpawner(event);
   } else if (event.itemStack.typeId === "minecraft:lava_bucket") {
-    logrief_handle_lava_bucket(event);
+    logriefHandleLavaBucket(event);
   }
 });
 
