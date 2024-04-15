@@ -1,5 +1,5 @@
-import { world, system, TicksPerSecond, Player, ItemUseOnBeforeEvent, ItemUseBeforeEvent, ItemUseAfterEvent } from "@minecraft/server";
-import { ModalFormData, ActionFormData, ActionFormResponse } from "@minecraft/server-ui";
+import { world, system, TicksPerSecond, Player, ItemUseOnBeforeEvent, ItemUseBeforeEvent } from "@minecraft/server";
+import { ModalFormData } from "@minecraft/server-ui";
 
 let faux_operators: { [name: string]: boolean } = {};
 
@@ -86,38 +86,6 @@ world.beforeEvents.itemUseOn.subscribe((event: ItemUseOnBeforeEvent) => {
     }
   }
 });
-
-world.afterEvents.itemUse.subscribe((event: ItemUseAfterEvent) => {
-  if (event.itemStack.typeId === "minecraft:stick"){
-    if(event.itemStack.nameTag === "tpme" ) {
-      const player: Player = event.source;
-      const loc = world.getDefaultSpawnLocation();
-      if( loc.y !== 32767){
-        player.sendMessage("Your wish is my command...");
-        player.teleport(world.getDefaultSpawnLocation());
-      }
-    } else if(event.itemStack.nameTag === "tpto" ) {
-      const player: Player = event.source;
-      const other_players: Player[] = world.getAllPlayers();
-      if(other_players.length !== 1) {
-        const form = new ActionFormData()
-        .title('Teleport')
-        .body('Choose the player you would like to teleport to');
-        for(const other of other_players){
-          form.button(other.name);
-        }
-        form.show(player).then((response: ActionFormResponse) => {
-          if(response.selection !== undefined){
-            player.sendMessage("Your wish is my command...");
-            const loc = other_players[response.selection].location;
-            player.teleport(loc);
-          }
-        });        
-      }
-    }
-  }
-});
-
 
 function logrief_handle_spawn_egg(event: ItemUseOnBeforeEvent){
   const spawn_rate = options["spawn_rate"];
