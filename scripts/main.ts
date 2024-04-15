@@ -12,65 +12,67 @@ let options: { [opt: string]: any } = {
 };
 
 function fauxOperatorAdd(player: Player) {
-  if( !(player.name in fauxOperators)){
-    fauxOperators[player.name]=true;
+  if (!(player.name in fauxOperators)) {
+    fauxOperators[player.name] = true;
     system.run(() => {
       player.sendMessage(`logrief restrictions are now disabled for you`);
     });
-    console.log(`Logrief: faux operator added: ${player.name}`)
+    console.log(`Logrief: faux operator added: ${player.name}`);
   }
 }
 
 function fauxOperatorRemove(player: Player) {
-  if( player.name in fauxOperators){
+  if (player.name in fauxOperators) {
     delete fauxOperators[player.name];
     system.run(() => {
       player.sendMessage(`logrief restrictions are now enabled for you`);
     });
-    console.log(`Logrief: faux operator removed: ${player.name}`)
+    console.log(`Logrief: faux operator removed: ${player.name}`);
   }
 }
 
 function isOperator(player: Player) {
-  if( !player ){
+  if (!player) {
     return false;
   }
-  if( (player as any)?.isOp?.()){
+  if ((player as any)?.isOp?.()) {
     return true;
   }
   return fauxOperators[player.name] ?? false;
 }
 
 world.beforeEvents.itemUse.subscribe((event: ItemUseBeforeEvent) => {
-  if (event.itemStack.typeId === "minecraft:command_block"){
-    if(event.itemStack.nameTag === "logrief" ) {
+  if (event.itemStack.typeId === "minecraft:command_block") {
+    if (event.itemStack.nameTag === "logrief") {
       event.cancel = true;
       fauxOperatorAdd(event.source);
       system.run(() => {
-        let form = new ModalFormData()
-          .title("Logrief controls");
+        let form = new ModalFormData().title("Logrief controls");
         for (const [key, value] of Object.entries(options)) {
-          if(typeof value === "boolean"){
+          if (typeof value === "boolean") {
             form.toggle(key, value);
-          } else if (typeof value === "number"){
+          } else if (typeof value === "number") {
             form.slider(key, -1, 20, 1, value);
           }
         }
-        form.show(event.source).then(r => {
-          if(r.canceled) {
-            return;
-          }
-          if(r.formValues){
-            let keys = Object.keys(options);
-            for(let index=0; index < r.formValues.length; ++index){
-              options[keys[index]] = r.formValues[index];
+        form
+          .show(event.source)
+          .then((r) => {
+            if (r.canceled) {
+              return;
             }
-          }
-        }).catch((e) => {
-          console.error(e, e.stack);
-        });
+            if (r.formValues) {
+              let keys = Object.keys(options);
+              for (let index = 0; index < r.formValues.length; ++index) {
+                options[keys[index]] = r.formValues[index];
+              }
+            }
+          })
+          .catch((e) => {
+            console.error(e, e.stack);
+          });
       });
-    } else if (event.itemStack.nameTag === "nologrief" ) {
+    } else if (event.itemStack.nameTag === "nologrief") {
       event.cancel = true;
       fauxOperatorRemove(event.source);
     }
@@ -78,23 +80,23 @@ world.beforeEvents.itemUse.subscribe((event: ItemUseBeforeEvent) => {
 });
 
 world.beforeEvents.itemUseOn.subscribe((event: ItemUseOnBeforeEvent) => {
-  if (event.itemStack.typeId === "minecraft:command_block"){
-    if(event.itemStack.nameTag === "logrief" ) {
+  if (event.itemStack.typeId === "minecraft:command_block") {
+    if (event.itemStack.nameTag === "logrief") {
       event.cancel = true;
-    } else if (event.itemStack.nameTag === "nologrief" ) {
+    } else if (event.itemStack.nameTag === "nologrief") {
       event.cancel = true;
     }
   }
 });
 
-function logriefHandleSpawnEgg(event: ItemUseOnBeforeEvent){
+function logriefHandleSpawnEgg(event: ItemUseOnBeforeEvent) {
   const spawnRate = options["spawn_rate"];
-  if(spawnRate < 0){
+  if (spawnRate < 0) {
     // Unlimited spawning
     return;
   }
   const player = event.source;
-  if(spawnRate == 0){
+  if (spawnRate == 0) {
     event.cancel = true;
     system.run(() => {
       player.sendMessage(`Entity spawning is currently disabled...`);
@@ -120,8 +122,8 @@ function logriefHandleSpawnEgg(event: ItemUseOnBeforeEvent){
   player.setDynamicProperty("last_spawn_tick", currentTick);
 }
 
-function logriefHandleLavaBucket(event: ItemUseOnBeforeEvent){
-  if(!options["lava_enabled"]){
+function logriefHandleLavaBucket(event: ItemUseOnBeforeEvent) {
+  if (!options["lava_enabled"]) {
     event.cancel = true;
     system.run(() => {
       const player = event.source;
@@ -130,8 +132,8 @@ function logriefHandleLavaBucket(event: ItemUseOnBeforeEvent){
   }
 }
 
-function logriefHandleSpawner(event: ItemUseOnBeforeEvent){
-  if(!options["spawners_enabled"]){
+function logriefHandleSpawner(event: ItemUseOnBeforeEvent) {
+  if (!options["spawners_enabled"]) {
     event.cancel = true;
     system.run(() => {
       const player = event.source;
@@ -140,8 +142,8 @@ function logriefHandleSpawner(event: ItemUseOnBeforeEvent){
   }
 }
 
-function logriefHandlePotion(event: ItemUseBeforeEvent){
-  if(!options["potions_enabled"]){
+function logriefHandlePotion(event: ItemUseBeforeEvent) {
+  if (!options["potions_enabled"]) {
     event.cancel = true;
     const player = event.source;
     system.run(() => {
@@ -154,7 +156,7 @@ world.beforeEvents.itemUse.subscribe((event) => {
   if (isOperator(event.source)) {
     return;
   }
-  if (event.itemStack.typeId.includes("potion") ) {
+  if (event.itemStack.typeId.includes("potion")) {
     logriefHandlePotion(event);
   }
 });
@@ -164,7 +166,7 @@ world.beforeEvents.itemUseOn.subscribe((event) => {
     return;
   }
 
-  if (event.itemStack.typeId.endsWith("_spawn_egg") ) {
+  if (event.itemStack.typeId.endsWith("_spawn_egg")) {
     logriefHandleSpawnEgg(event);
   } else if (event.itemStack.typeId.includes("spawner")) {
     logriefHandleSpawner(event);
