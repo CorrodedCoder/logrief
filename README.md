@@ -6,13 +6,17 @@ logrief is a Minecraft Bedrock add-on for multi-player games or Bedrock servers 
 
 It can be used as part of the normal Minecraft Bedrock client or as part of the Minecraft Bedrock Dedicated Server.
 
+## Demonstration
+
+A demonstration of the features can be seen at https://youtu.be/qaKPgwGZa3E
+
 ## Features
 
-1) (Optionally) Prevent use of Lava buckets.
-2) (Optionally) Prevent placement of mob_spawners.
-3) (Optionally) Prevent use of potions (such as invisibility).
-4) (Optionally) Limit the rate at which mobs may be spawned by spawn eggs or disable their use entirely.
-5) Operator only UI for in game configuration of the restrictions.
+1. (Optionally) Prevent use of Lava buckets.
+2. (Optionally) Prevent placement of mob_spawners.
+3. (Optionally) Prevent use of potions (such as invisibility).
+4. (Optionally) Limit the rate at which mobs may be spawned by spawn eggs or disable their use entirely.
+5. Operator only UI for in game configuration of the restrictions.
 
 See [instructions](docs/Instructions.md) for further details of how to install and use the add-on.
 
@@ -24,8 +28,8 @@ See [instructions](docs/Instructions.md) for further details of how to install a
 
 From a command prompt/terminal browse to the repository and run:
 
-1) `npm install`
-2) `npm run mcaddon`
+1. `npm install`
+2. `npm run mcaddon`
 
 The add-on should be generated as dist/packages/logrief.mcaddon
 
