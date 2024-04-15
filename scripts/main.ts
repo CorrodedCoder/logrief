@@ -44,10 +44,49 @@ function isOperator(player: Player) {
   if (!player) {
     return false;
   }
+  // I have no idea if this will actually work.
+  // I'd rather find a compile/transpile time way to detect that
+  // isOp is available and callable with zero parameters
   if ((player as any)?.isOp?.()) {
     return true;
   }
   return fauxOperators[player.name] ?? false;
+}
+
+function logriefAdminUI(player: Player) {
+  let form = new ModalFormData().title("Logrief controls");
+  for (const [key, value] of Object.entries(options)) {
+    if (typeof value === "boolean") {
+      form.toggle(key, value);
+    } else if (typeof value === "number") {
+      form.slider(key, -1, 20, 1, value);
+    }
+  }
+  form
+    .show(player)
+    .then((r) => {
+      if (r.canceled) {
+        return;
+      }
+      if (r.formValues) {
+        let keys = Object.keys(options);
+        for (let index = 0; index < r.formValues.length; ++index) {
+          options[keys[index]] = r.formValues[index];
+        }
+      }
+    })
+    .catch((e) => {
+      console.error(e, e.stack);
+    });
+}
+
+function logriefHandleAdminEnableEvent(player: Player) {
+  fauxOperatorAdd(player);
+  system.run(() => logriefAdminUI(player));
+}
+
+function logriefHandleAdminDisableEvent(player: Player) {
+  fauxOperatorRemove(player);
 }
 
 function isLogriefAdminEnableEvent(event: ItemUseAfterEvent | ItemUseOnAfterEvent): boolean {
@@ -68,49 +107,23 @@ function isLogriefAdminDisableEvent(event: ItemUseAfterEvent | ItemUseOnAfterEve
   return false;
 }
 
-world.beforeEvents.itemUse.subscribe((event: ItemUseBeforeEvent) => {
+function logriefHandleAdminItemUseEvent(event: ItemUseBeforeEvent) {
   if (isLogriefAdminEnableEvent(event)) {
     event.cancel = true;
-    fauxOperatorAdd(event.source);
-    system.run(() => {
-      let form = new ModalFormData().title("Logrief controls");
-      for (const [key, value] of Object.entries(options)) {
-        if (typeof value === "boolean") {
-          form.toggle(key, value);
-        } else if (typeof value === "number") {
-          form.slider(key, -1, 20, 1, value);
-        }
-      }
-      form
-        .show(event.source)
-        .then((r) => {
-          if (r.canceled) {
-            return;
-          }
-          if (r.formValues) {
-            let keys = Object.keys(options);
-            for (let index = 0; index < r.formValues.length; ++index) {
-              options[keys[index]] = r.formValues[index];
-            }
-          }
-        })
-        .catch((e) => {
-          console.error(e, e.stack);
-        });
-    });
+    logriefHandleAdminEnableEvent(event.source);
   } else if (isLogriefAdminDisableEvent(event)) {
     event.cancel = true;
-    fauxOperatorRemove(event.source);
+    logriefHandleAdminDisableEvent(event.source);
   }
-});
+}
 
 // Because this is a block, without trapping this event, right clicking the command_block
 // will attempt to place it, so we need to stop that happening.
-world.beforeEvents.itemUseOn.subscribe((event: ItemUseOnBeforeEvent) => {
+function logriefHandleAdminItemUseOnEvent(event: ItemUseOnBeforeEvent) {
   if (isLogriefAdminEnableEvent(event) || isLogriefAdminDisableEvent(event)) {
     event.cancel = true;
   }
-});
+}
 
 function logriefHandleSpawnEgg(event: ItemUseOnBeforeEvent) {
   const spawnRate = options["spawn_rate"];
@@ -168,8 +181,8 @@ function logriefHandleSpawner(event: ItemUseOnBeforeEvent) {
 function logriefHandlePotion(event: ItemUseBeforeEvent) {
   if (!options["potions_enabled"]) {
     event.cancel = true;
-    const player = event.source;
     system.run(() => {
+      const player = event.source;
       player.sendMessage(`Potion use is disabled`);
     });
   }
@@ -198,12 +211,14 @@ function logriefHandleItemUseOnEvent(event: ItemUseOnBeforeEvent) {
   }
 }
 
-world.beforeEvents.itemUse.subscribe((event) => {
-  logriefHandleItemUseEvent(event);
-});
+function logriefRegisterEvents() {
+  world.beforeEvents.itemUse.subscribe(logriefHandleAdminItemUseEvent);
+  world.beforeEvents.itemUseOn.subscribe(logriefHandleAdminItemUseOnEvent);
 
-world.beforeEvents.itemUseOn.subscribe((event) => {
-  logriefHandleItemUseOnEvent(event);
-});
+  world.beforeEvents.itemUse.subscribe(logriefHandleItemUseEvent);
+  world.beforeEvents.itemUseOn.subscribe(logriefHandleItemUseOnEvent);
+}
+
+logriefRegisterEvents();
 
 console.log("Logrief enabled...");
