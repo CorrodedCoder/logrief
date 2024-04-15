@@ -23,9 +23,7 @@ let options: { [opt: string]: any } = {
 function fauxOperatorAdd(player: Player) {
   if (!(player.name in fauxOperators)) {
     fauxOperators[player.name] = true;
-    system.run(() => {
-      player.sendMessage(`logrief restrictions are now disabled for you`);
-    });
+    player.sendMessage(`logrief restrictions are now disabled for you`);
     console.log(`Logrief: faux operator added: ${player.name}`);
   }
 }
@@ -33,9 +31,7 @@ function fauxOperatorAdd(player: Player) {
 function fauxOperatorRemove(player: Player) {
   if (player.name in fauxOperators) {
     delete fauxOperators[player.name];
-    system.run(() => {
-      player.sendMessage(`logrief restrictions are now enabled for you`);
-    });
+    player.sendMessage(`logrief restrictions are now enabled for you`);
     console.log(`Logrief: faux operator removed: ${player.name}`);
   }
 }
@@ -134,9 +130,7 @@ function logriefHandleSpawnEgg(event: ItemUseOnBeforeEvent) {
   const player = event.source;
   if (spawnRate == 0) {
     event.cancel = true;
-    system.run(() => {
-      player.sendMessage(`Entity spawning is currently disabled...`);
-    });
+    player.sendMessage(`Entity spawning is currently disabled...`);
   }
 
   const currentTick = system.currentTick;
@@ -148,9 +142,7 @@ function logriefHandleSpawnEgg(event: ItemUseOnBeforeEvent) {
 
   if (spawn_count >= options["spawn_rate_limit"]) {
     event.cancel = true;
-    system.run(() => {
-      player.sendMessage(`Too many entities have been spawned by player. Rate limiting is now in effect...`);
-    });
+    player.sendMessage(`Too many entities have been spawned by player. Rate limiting is now in effect...`);
   } else {
     ++spawn_count;
   }
@@ -161,30 +153,21 @@ function logriefHandleSpawnEgg(event: ItemUseOnBeforeEvent) {
 function logriefHandleLavaBucket(event: ItemUseOnBeforeEvent) {
   if (!options["lava_enabled"]) {
     event.cancel = true;
-    system.run(() => {
-      const player = event.source;
-      player.sendMessage(`Lava placement is disabled`);
-    });
+    event.source.sendMessage(`Lava placement is disabled`);
   }
 }
 
 function logriefHandleSpawner(event: ItemUseOnBeforeEvent) {
   if (!options["spawners_enabled"]) {
     event.cancel = true;
-    system.run(() => {
-      const player = event.source;
-      player.sendMessage(`Spawner placement is disabled`);
-    });
+    event.source.sendMessage(`Spawner placement is disabled`);
   }
 }
 
 function logriefHandlePotion(event: ItemUseBeforeEvent) {
   if (!options["potions_enabled"]) {
     event.cancel = true;
-    system.run(() => {
-      const player = event.source;
-      player.sendMessage(`Potion use is disabled`);
-    });
+    event.source.sendMessage(`Potion use is disabled`);
   }
 }
 
