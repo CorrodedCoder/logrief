@@ -1,4 +1,13 @@
-import { world, system, TicksPerSecond, Player, ItemUseOnBeforeEvent, ItemUseBeforeEvent } from "@minecraft/server";
+import {
+  world,
+  system,
+  TicksPerSecond,
+  Player,
+  ItemUseOnBeforeEvent,
+  ItemUseOnAfterEvent,
+  ItemUseBeforeEvent,
+  ItemUseAfterEvent,
+} from "@minecraft/server";
 import { ModalFormData } from "@minecraft/server-ui";
 
 let fauxOperators: { [name: string]: boolean } = {};
@@ -41,51 +50,65 @@ function isOperator(player: Player) {
   return fauxOperators[player.name] ?? false;
 }
 
-world.beforeEvents.itemUse.subscribe((event: ItemUseBeforeEvent) => {
+function isLogriefAdminEnableEvent(event: ItemUseAfterEvent | ItemUseOnAfterEvent): boolean {
   if (event.itemStack.typeId === "minecraft:command_block") {
     if (event.itemStack.nameTag === "logrief") {
-      event.cancel = true;
-      fauxOperatorAdd(event.source);
-      system.run(() => {
-        let form = new ModalFormData().title("Logrief controls");
-        for (const [key, value] of Object.entries(options)) {
-          if (typeof value === "boolean") {
-            form.toggle(key, value);
-          } else if (typeof value === "number") {
-            form.slider(key, -1, 20, 1, value);
-          }
-        }
-        form
-          .show(event.source)
-          .then((r) => {
-            if (r.canceled) {
-              return;
-            }
-            if (r.formValues) {
-              let keys = Object.keys(options);
-              for (let index = 0; index < r.formValues.length; ++index) {
-                options[keys[index]] = r.formValues[index];
-              }
-            }
-          })
-          .catch((e) => {
-            console.error(e, e.stack);
-          });
-      });
-    } else if (event.itemStack.nameTag === "nologrief") {
-      event.cancel = true;
-      fauxOperatorRemove(event.source);
+      return true;
     }
+  }
+  return false;
+}
+
+function isLogriefAdminDisableEvent(event: ItemUseAfterEvent | ItemUseOnAfterEvent): boolean {
+  if (event.itemStack.typeId === "minecraft:command_block") {
+    if (event.itemStack.nameTag === "nologrief") {
+      return true;
+    }
+  }
+  return false;
+}
+
+world.beforeEvents.itemUse.subscribe((event: ItemUseBeforeEvent) => {
+  if (isLogriefAdminEnableEvent(event)) {
+    event.cancel = true;
+    fauxOperatorAdd(event.source);
+    system.run(() => {
+      let form = new ModalFormData().title("Logrief controls");
+      for (const [key, value] of Object.entries(options)) {
+        if (typeof value === "boolean") {
+          form.toggle(key, value);
+        } else if (typeof value === "number") {
+          form.slider(key, -1, 20, 1, value);
+        }
+      }
+      form
+        .show(event.source)
+        .then((r) => {
+          if (r.canceled) {
+            return;
+          }
+          if (r.formValues) {
+            let keys = Object.keys(options);
+            for (let index = 0; index < r.formValues.length; ++index) {
+              options[keys[index]] = r.formValues[index];
+            }
+          }
+        })
+        .catch((e) => {
+          console.error(e, e.stack);
+        });
+    });
+  } else if (isLogriefAdminDisableEvent(event)) {
+    event.cancel = true;
+    fauxOperatorRemove(event.source);
   }
 });
 
+// Because this is a block, without trapping this event, right clicking the command_block
+// will attempt to place it, so we need to stop that happening.
 world.beforeEvents.itemUseOn.subscribe((event: ItemUseOnBeforeEvent) => {
-  if (event.itemStack.typeId === "minecraft:command_block") {
-    if (event.itemStack.nameTag === "logrief") {
-      event.cancel = true;
-    } else if (event.itemStack.nameTag === "nologrief") {
-      event.cancel = true;
-    }
+  if (isLogriefAdminEnableEvent(event) || isLogriefAdminDisableEvent(event)) {
+    event.cancel = true;
   }
 });
 
