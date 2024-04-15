@@ -175,16 +175,16 @@ function logriefHandlePotion(event: ItemUseBeforeEvent) {
   }
 }
 
-world.beforeEvents.itemUse.subscribe((event) => {
+function logriefHandleItemUseEvent(event: ItemUseBeforeEvent) {
   if (isOperator(event.source)) {
     return;
   }
   if (event.itemStack.typeId.includes("potion")) {
     logriefHandlePotion(event);
   }
-});
+}
 
-world.beforeEvents.itemUseOn.subscribe((event) => {
+function logriefHandleItemUseOnEvent(event: ItemUseOnBeforeEvent) {
   if (isOperator(event.source)) {
     return;
   }
@@ -196,6 +196,14 @@ world.beforeEvents.itemUseOn.subscribe((event) => {
   } else if (event.itemStack.typeId === "minecraft:lava_bucket") {
     logriefHandleLavaBucket(event);
   }
+}
+
+world.beforeEvents.itemUse.subscribe((event) => {
+  logriefHandleItemUseEvent(event);
+});
+
+world.beforeEvents.itemUseOn.subscribe((event) => {
+  logriefHandleItemUseOnEvent(event);
 });
 
 console.log("Logrief enabled...");
