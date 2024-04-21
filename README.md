@@ -8,7 +8,7 @@ It can be used as part of the normal Minecraft Bedrock client or as part of the 
 
 ## Demonstration
 
-A demonstration of the features can be seen at https://youtu.be/qaKPgwGZa3E
+A demonstration of the features can be seen at https://youtu.be/SmusZ_KXlik
 
 ## Features
 
