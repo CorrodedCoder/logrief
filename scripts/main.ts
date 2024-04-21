@@ -24,12 +24,14 @@ let options: { [opt: string]: any } = defaultOptions;
 function exemptedUserAdd(player: Player) {
   if (!exemptedUsers.has(player.name)) {
     exemptedUsers.add(player.name);
+    world.setDynamicProperty("logrief_exempted_users", JSON.stringify([...exemptedUsers]));
     console.log(`Logrief: ${player.name} added to exempted users`);
   }
 }
 
 function exemptedUserRemove(player: Player) {
   if (exemptedUsers.delete(player.name)) {
+    world.setDynamicProperty("logrief_exempted_users", JSON.stringify([...exemptedUsers]));
     console.log(`Logrief: ${player.name} removed from exempted users`);
   }
 }
@@ -217,6 +219,12 @@ function logriefInit() {
   const logriefOptionProperty = world.getDynamicProperty("logrief_options");
   if (logriefOptionProperty) {
     options = JSON.parse(logriefOptionProperty as string);
+    console.log(`Logrief: Loaded options as: ${logriefOptionProperty}`);
+  }
+  const logriefExemptedUsersProperty = world.getDynamicProperty("logrief_exempted_users");
+  if (logriefExemptedUsersProperty) {
+    exemptedUsers = new Set<string>(JSON.parse(logriefExemptedUsersProperty as string));
+    console.log(`Logrief: Loaded exempted users as: ${[...exemptedUsers]}`);
   }
   logriefRegisterEvents();
 }
