@@ -46,14 +46,20 @@ function isExemptedUser(player: Player) {
   return exemptedUsers.has(player.name);
 }
 
+function addFormOption(form: ModalFormData, key: string, value: boolean | number | string) {
+  if (typeof value === "boolean") {
+    form.toggle(key, value);
+  } else if (typeof value === "number") {
+    form.slider(key, -1, 20, 1, value);
+  } else if (typeof value === "string") {
+    form.textField(key, value);
+  }
+}
+
 function logriefAdminUI(player: Player) {
   let form = new ModalFormData().title("Logrief controls");
   for (const [key, value] of Object.entries(options)) {
-    if (typeof value === "boolean") {
-      form.toggle(key, value);
-    } else if (typeof value === "number") {
-      form.slider(key, -1, 20, 1, value);
-    }
+    addFormOption(form, key, value);
   }
   form
     .show(player)
