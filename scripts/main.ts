@@ -16,8 +16,7 @@ let options: { [opt: string]: any } = {
   lava_enabled: false,
   spawners_enabled: false,
   potions_enabled: false,
-  spawn_rate: 3,
-  spawn_rate_limit: 20,
+  spawns_per_minute: 20,
 };
 
 function exemptedUserAdd(player: Player) {
@@ -50,7 +49,7 @@ function addFormOption(form: ModalFormData, key: string, value: boolean | number
   if (typeof value === "boolean") {
     form.toggle(key, value);
   } else if (typeof value === "number") {
-    form.slider(key, -1, 20, 1, value);
+    form.slider(key, -1, 60, 1, value);
   } else if (typeof value === "string") {
     form.textField(key, value);
   }
@@ -115,27 +114,37 @@ function logriefHandleAdminItemUseOnEvent(event: ItemUseOnBeforeEvent) {
 }
 
 function logriefHandleSpawnEgg(event: ItemUseOnBeforeEvent) {
-  const spawnRate = options["spawn_rate"];
-  if (spawnRate < 0) {
+  const spawnsPerMinute = options["spawns_per_minute"];
+  if (spawnsPerMinute < 0) {
     // Unlimited spawning
     return;
   }
   const player = event.source;
-  if (spawnRate == 0) {
+  if (spawnsPerMinute == 0) {
     event.cancel = true;
     player.sendMessage(`Entity spawning is currently disabled...`);
+    return;
   }
 
+  // This is sort of "the leaky bucket" strategy for rate limiting:
+  // https://en.wikipedia.org/wiki/Leaky_bucket
   const currentTick = system.currentTick;
   const lastSpawnTick = Number(player.getDynamicProperty("last_spawn_tick") ?? currentTick);
-  let spawnCount = Number(player.getDynamicProperty("spawn_count") ?? 0);
   const elapsed = (currentTick - lastSpawnTick) / TicksPerSecond;
-  const earnedSpawnTokens = elapsed / spawnRate;
+  const spawnRechargeRate = 60 / spawnsPerMinute;
+  const earnedSpawnTokens = elapsed / spawnRechargeRate;
+  let spawnCount = Number(player.getDynamicProperty("spawn_count") ?? 0);
   spawnCount = Math.max(0, spawnCount - earnedSpawnTokens);
 
-  if (spawnCount >= options["spawn_rate_limit"]) {
+  if (spawnCount >= spawnsPerMinute) {
     event.cancel = true;
     player.sendMessage(`Too many entities have been spawned by player. Rate limiting is now in effect...`);
+    if (spawnCount - spawnsPerMinute > 1) {
+      // If the spawnCount is greater than the spawnsPerMinute by more than 1 then the admin must
+      // have reconfigured the setting to a lower value, so let's adjust their spawnCount to be no
+      // more than one greater or they could be stuck waiting for a very long time.
+      spawnCount = spawnsPerMinute + 1;
+    }
   } else {
     ++spawnCount;
   }
