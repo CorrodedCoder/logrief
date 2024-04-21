@@ -10,7 +10,7 @@ import {
 } from "@minecraft/server";
 import { ModalFormData } from "@minecraft/server-ui";
 
-let fauxOperators: { [name: string]: boolean } = {};
+let exemptedUsers: { [name: string]: boolean } = {};
 
 let options: { [opt: string]: any } = {
   lava_enabled: false,
@@ -20,23 +20,23 @@ let options: { [opt: string]: any } = {
   spawn_rate_limit: 20,
 };
 
-function fauxOperatorAdd(player: Player) {
-  if (!(player.name in fauxOperators)) {
-    fauxOperators[player.name] = true;
+function exemptedUserAdd(player: Player) {
+  if (!(player.name in exemptedUsers)) {
+    exemptedUsers[player.name] = true;
     player.sendMessage(`logrief restrictions are now disabled for you`);
-    console.log(`Logrief: faux operator added: ${player.name}`);
+    console.log(`Logrief: ${player.name} was added to exempted users`);
   }
 }
 
-function fauxOperatorRemove(player: Player) {
-  if (player.name in fauxOperators) {
-    delete fauxOperators[player.name];
+function exemptedUserRemove(player: Player) {
+  if (player.name in exemptedUsers) {
+    delete exemptedUsers[player.name];
     player.sendMessage(`logrief restrictions are now enabled for you`);
-    console.log(`Logrief: faux operator removed: ${player.name}`);
+    console.log(`Logrief: ${player.name} was removed from exempted users`);
   }
 }
 
-function isOperator(player: Player) {
+function isExemptedUser(player: Player) {
   if (!player) {
     return false;
   }
@@ -46,7 +46,7 @@ function isOperator(player: Player) {
   if ((player as any)?.isOp?.()) {
     return true;
   }
-  return fauxOperators[player.name] ?? false;
+  return exemptedUsers[player.name] ?? false;
 }
 
 function logriefAdminUI(player: Player) {
@@ -77,12 +77,12 @@ function logriefAdminUI(player: Player) {
 }
 
 function logriefHandleAdminEnableEvent(player: Player) {
-  fauxOperatorAdd(player);
+  exemptedUserAdd(player);
   system.run(() => logriefAdminUI(player));
 }
 
 function logriefHandleAdminDisableEvent(player: Player) {
-  fauxOperatorRemove(player);
+  exemptedUserRemove(player);
 }
 
 function isLogriefAdminEnableEvent(event: ItemUseAfterEvent | ItemUseOnAfterEvent): boolean {
@@ -172,7 +172,7 @@ function logriefHandlePotion(event: ItemUseBeforeEvent) {
 }
 
 function logriefHandleItemUseEvent(event: ItemUseBeforeEvent) {
-  if (isOperator(event.source)) {
+  if (isExemptedUser(event.source)) {
     return;
   }
   if (event.itemStack.typeId.includes("potion")) {
@@ -181,7 +181,7 @@ function logriefHandleItemUseEvent(event: ItemUseBeforeEvent) {
 }
 
 function logriefHandleItemUseOnEvent(event: ItemUseOnBeforeEvent) {
-  if (isOperator(event.source)) {
+  if (isExemptedUser(event.source)) {
     return;
   }
 
