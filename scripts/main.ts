@@ -127,19 +127,19 @@ function logriefHandleSpawnEgg(event: ItemUseOnBeforeEvent) {
   }
 
   const currentTick = system.currentTick;
-  const last_spawn_tick = Number(player.getDynamicProperty("last_spawn_tick") ?? currentTick);
-  let spawn_count = Number(player.getDynamicProperty("spawn_count") ?? 0);
-  const elapsed = (currentTick - last_spawn_tick) / TicksPerSecond;
-  const earned_spawn_tokens = elapsed / spawnRate;
-  spawn_count = Math.max(0, spawn_count - earned_spawn_tokens);
+  const lastSpawnTick = Number(player.getDynamicProperty("last_spawn_tick") ?? currentTick);
+  let spawnCount = Number(player.getDynamicProperty("spawn_count") ?? 0);
+  const elapsed = (currentTick - lastSpawnTick) / TicksPerSecond;
+  const earnedSpawnTokens = elapsed / spawnRate;
+  spawnCount = Math.max(0, spawnCount - earnedSpawnTokens);
 
-  if (spawn_count >= options["spawn_rate_limit"]) {
+  if (spawnCount >= options["spawn_rate_limit"]) {
     event.cancel = true;
     player.sendMessage(`Too many entities have been spawned by player. Rate limiting is now in effect...`);
   } else {
-    ++spawn_count;
+    ++spawnCount;
   }
-  player.setDynamicProperty("spawn_count", spawn_count);
+  player.setDynamicProperty("spawn_count", spawnCount);
   player.setDynamicProperty("last_spawn_tick", currentTick);
 }
 
