@@ -12,12 +12,14 @@ import { ModalFormData } from "@minecraft/server-ui";
 
 let exemptedUsers = new Set<string>();
 
-let options: { [opt: string]: any } = {
+const defaultOptions: { [opt: string]: any } = {
   lava_enabled: false,
   spawners_enabled: false,
   potions_enabled: false,
   spawns_per_minute: 20,
 };
+
+let options: { [opt: string]: any } = defaultOptions;
 
 function exemptedUserAdd(player: Player) {
   if (!exemptedUsers.has(player.name)) {
@@ -57,11 +59,15 @@ function addFormOption(form: ModalFormData, key: string, value: boolean | number
 
 function logriefAdminUI(player: Player) {
   let form = new ModalFormData().title("Logrief controls");
+  let optionsChanged: boolean = false;
   let optionHandlers: ((value: any) => void)[] = [];
   for (const [key, value] of Object.entries(options)) {
     addFormOption(form, key, value);
     optionHandlers.push((val) => {
-      options[key] = val;
+      if (options[key] !== val) {
+        options[key] = val;
+        optionsChanged = true;
+      }
     });
   }
   form.toggle("No restrictions for me", isExemptedUser(player));
@@ -81,6 +87,9 @@ function logriefAdminUI(player: Player) {
       if (r.formValues) {
         for (let index = 0; index < r.formValues.length; ++index) {
           optionHandlers[index](r.formValues[index]);
+        }
+        if (optionsChanged) {
+          world.setDynamicProperty("logrief_options", JSON.stringify(options));
         }
       }
     })
@@ -204,6 +213,14 @@ function logriefRegisterEvents() {
   world.beforeEvents.itemUseOn.subscribe(logriefHandleItemUseOnEvent);
 }
 
-logriefRegisterEvents();
+function logriefInit() {
+  const logriefOptionProperty = world.getDynamicProperty("logrief_options");
+  if (logriefOptionProperty) {
+    options = JSON.parse(logriefOptionProperty as string);
+  }
+  logriefRegisterEvents();
+}
+
+logriefInit();
 
 console.log("Logrief enabled...");
