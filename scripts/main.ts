@@ -10,7 +10,7 @@ import {
 } from "@minecraft/server";
 import { ModalFormData } from "@minecraft/server-ui";
 
-let exemptedUsers: { [name: string]: boolean } = {};
+let exemptedUsers = new Set<string>();
 
 let options: { [opt: string]: any } = {
   lava_enabled: false,
@@ -21,18 +21,15 @@ let options: { [opt: string]: any } = {
 };
 
 function exemptedUserAdd(player: Player) {
-  if (!(player.name in exemptedUsers)) {
-    exemptedUsers[player.name] = true;
-    player.sendMessage(`logrief restrictions are now disabled for you`);
-    console.log(`Logrief: ${player.name} was added to exempted users`);
+  if (!exemptedUsers.has(player.name)) {
+    exemptedUsers.add(player.name);
+    console.log(`Logrief: ${player.name} added to exempted users`);
   }
 }
 
 function exemptedUserRemove(player: Player) {
-  if (player.name in exemptedUsers) {
-    delete exemptedUsers[player.name];
-    player.sendMessage(`logrief restrictions are now enabled for you`);
-    console.log(`Logrief: ${player.name} was removed from exempted users`);
+  if (exemptedUsers.delete(player.name)) {
+    console.log(`Logrief: ${player.name} removed from exempted users`);
   }
 }
 
@@ -46,7 +43,7 @@ function isExemptedUser(player: Player) {
   if ((player as any)?.isOp?.()) {
     return true;
   }
-  return exemptedUsers[player.name] ?? false;
+  return exemptedUsers.has(player.name);
 }
 
 function logriefAdminUI(player: Player) {
