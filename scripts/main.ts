@@ -10,33 +10,33 @@ import {
 } from "@minecraft/server";
 import { ModalFormData } from "@minecraft/server-ui";
 
-let fauxOperators: { [name: string]: boolean } = {};
+let exemptedUsers = new Set<string>();
 
-let options: { [opt: string]: any } = {
+const defaultOptions: { [opt: string]: any } = {
   lava_enabled: false,
   spawners_enabled: false,
   potions_enabled: false,
-  spawn_rate: 3,
-  spawn_rate_limit: 20,
+  spawns_per_minute: 20,
 };
 
-function fauxOperatorAdd(player: Player) {
-  if (!(player.name in fauxOperators)) {
-    fauxOperators[player.name] = true;
-    player.sendMessage(`logrief restrictions are now disabled for you`);
-    console.log(`Logrief: faux operator added: ${player.name}`);
+let options: { [opt: string]: any } = defaultOptions;
+
+function exemptedUserAdd(player: Player) {
+  if (!exemptedUsers.has(player.name)) {
+    exemptedUsers.add(player.name);
+    world.setDynamicProperty("logrief_exempted_users", JSON.stringify([...exemptedUsers]));
+    console.log(`Logrief: ${player.name} added to exempted users`);
   }
 }
 
-function fauxOperatorRemove(player: Player) {
-  if (player.name in fauxOperators) {
-    delete fauxOperators[player.name];
-    player.sendMessage(`logrief restrictions are now enabled for you`);
-    console.log(`Logrief: faux operator removed: ${player.name}`);
+function exemptedUserRemove(player: Player) {
+  if (exemptedUsers.delete(player.name)) {
+    world.setDynamicProperty("logrief_exempted_users", JSON.stringify([...exemptedUsers]));
+    console.log(`Logrief: ${player.name} removed from exempted users`);
   }
 }
 
-function isOperator(player: Player) {
+function isExemptedUser(player: Player) {
   if (!player) {
     return false;
   }
@@ -46,18 +46,40 @@ function isOperator(player: Player) {
   if ((player as any)?.isOp?.()) {
     return true;
   }
-  return fauxOperators[player.name] ?? false;
+  return exemptedUsers.has(player.name);
+}
+
+function addFormOption(form: ModalFormData, key: string, value: boolean | number | string) {
+  if (typeof value === "boolean") {
+    form.toggle(key, value);
+  } else if (typeof value === "number") {
+    form.slider(key, -1, 60, 1, value);
+  } else if (typeof value === "string") {
+    form.textField(key, value);
+  }
 }
 
 function logriefAdminUI(player: Player) {
   let form = new ModalFormData().title("Logrief controls");
+  let optionsChanged: boolean = false;
+  let optionHandlers: ((value: any) => void)[] = [];
   for (const [key, value] of Object.entries(options)) {
-    if (typeof value === "boolean") {
-      form.toggle(key, value);
-    } else if (typeof value === "number") {
-      form.slider(key, -1, 20, 1, value);
-    }
+    addFormOption(form, key, value);
+    optionHandlers.push((val) => {
+      if (options[key] !== val) {
+        options[key] = val;
+        optionsChanged = true;
+      }
+    });
   }
+  form.toggle("No restrictions for me", isExemptedUser(player));
+  optionHandlers.push((val: boolean) => {
+    if (val) {
+      exemptedUserAdd(player);
+    } else {
+      exemptedUserRemove(player);
+    }
+  });
   form
     .show(player)
     .then((r) => {
@@ -65,9 +87,11 @@ function logriefAdminUI(player: Player) {
         return;
       }
       if (r.formValues) {
-        let keys = Object.keys(options);
         for (let index = 0; index < r.formValues.length; ++index) {
-          options[keys[index]] = r.formValues[index];
+          optionHandlers[index](r.formValues[index]);
+        }
+        if (optionsChanged) {
+          world.setDynamicProperty("logrief_options", JSON.stringify(options));
         }
       }
     })
@@ -76,16 +100,7 @@ function logriefAdminUI(player: Player) {
     });
 }
 
-function logriefHandleAdminEnableEvent(player: Player) {
-  fauxOperatorAdd(player);
-  system.run(() => logriefAdminUI(player));
-}
-
-function logriefHandleAdminDisableEvent(player: Player) {
-  fauxOperatorRemove(player);
-}
-
-function isLogriefAdminEnableEvent(event: ItemUseAfterEvent | ItemUseOnAfterEvent): boolean {
+function isLogriefAdminEvent(event: ItemUseAfterEvent | ItemUseOnAfterEvent): boolean {
   if (event.itemStack.typeId === "minecraft:command_block") {
     if (event.itemStack.nameTag === "logrief") {
       return true;
@@ -94,59 +109,57 @@ function isLogriefAdminEnableEvent(event: ItemUseAfterEvent | ItemUseOnAfterEven
   return false;
 }
 
-function isLogriefAdminDisableEvent(event: ItemUseAfterEvent | ItemUseOnAfterEvent): boolean {
-  if (event.itemStack.typeId === "minecraft:command_block") {
-    if (event.itemStack.nameTag === "nologrief") {
-      return true;
-    }
-  }
-  return false;
-}
-
 function logriefHandleAdminItemUseEvent(event: ItemUseBeforeEvent) {
-  if (isLogriefAdminEnableEvent(event)) {
+  if (isLogriefAdminEvent(event)) {
     event.cancel = true;
-    logriefHandleAdminEnableEvent(event.source);
-  } else if (isLogriefAdminDisableEvent(event)) {
-    event.cancel = true;
-    logriefHandleAdminDisableEvent(event.source);
+    system.run(() => logriefAdminUI(event.source));
   }
 }
 
 // Because this is a block, without trapping this event, right clicking the command_block
 // will attempt to place it, so we need to stop that happening.
 function logriefHandleAdminItemUseOnEvent(event: ItemUseOnBeforeEvent) {
-  if (isLogriefAdminEnableEvent(event) || isLogriefAdminDisableEvent(event)) {
+  if (isLogriefAdminEvent(event)) {
     event.cancel = true;
   }
 }
 
 function logriefHandleSpawnEgg(event: ItemUseOnBeforeEvent) {
-  const spawnRate = options["spawn_rate"];
-  if (spawnRate < 0) {
+  const spawnsPerMinute = options["spawns_per_minute"];
+  if (spawnsPerMinute < 0) {
     // Unlimited spawning
     return;
   }
   const player = event.source;
-  if (spawnRate == 0) {
+  if (spawnsPerMinute == 0) {
     event.cancel = true;
     player.sendMessage(`Entity spawning is currently disabled...`);
+    return;
   }
 
+  // This is sort of "the leaky bucket" strategy for rate limiting:
+  // https://en.wikipedia.org/wiki/Leaky_bucket
   const currentTick = system.currentTick;
-  const last_spawn_tick = Number(player.getDynamicProperty("last_spawn_tick") ?? currentTick);
-  let spawn_count = Number(player.getDynamicProperty("spawn_count") ?? 0);
-  const elapsed = (currentTick - last_spawn_tick) / TicksPerSecond;
-  const earned_spawn_tokens = elapsed / spawnRate;
-  spawn_count = Math.max(0, spawn_count - earned_spawn_tokens);
+  const lastSpawnTick = Number(player.getDynamicProperty("last_spawn_tick") ?? currentTick);
+  const elapsed = (currentTick - lastSpawnTick) / TicksPerSecond;
+  const spawnRechargeRate = 60 / spawnsPerMinute;
+  const earnedSpawnTokens = elapsed / spawnRechargeRate;
+  let spawnCount = Number(player.getDynamicProperty("spawn_count") ?? 0);
+  spawnCount = Math.max(0, spawnCount - earnedSpawnTokens);
 
-  if (spawn_count >= options["spawn_rate_limit"]) {
+  if (spawnCount >= spawnsPerMinute) {
     event.cancel = true;
     player.sendMessage(`Too many entities have been spawned by player. Rate limiting is now in effect...`);
+    if (spawnCount - spawnsPerMinute > 1) {
+      // If the spawnCount is greater than the spawnsPerMinute by more than 1 then the admin must
+      // have reconfigured the setting to a lower value, so let's adjust their spawnCount to be no
+      // more than one greater or they could be stuck waiting for a very long time.
+      spawnCount = spawnsPerMinute + 1;
+    }
   } else {
-    ++spawn_count;
+    ++spawnCount;
   }
-  player.setDynamicProperty("spawn_count", spawn_count);
+  player.setDynamicProperty("spawn_count", spawnCount);
   player.setDynamicProperty("last_spawn_tick", currentTick);
 }
 
@@ -172,7 +185,7 @@ function logriefHandlePotion(event: ItemUseBeforeEvent) {
 }
 
 function logriefHandleItemUseEvent(event: ItemUseBeforeEvent) {
-  if (isOperator(event.source)) {
+  if (isExemptedUser(event.source)) {
     return;
   }
   if (event.itemStack.typeId.includes("potion")) {
@@ -181,7 +194,7 @@ function logriefHandleItemUseEvent(event: ItemUseBeforeEvent) {
 }
 
 function logriefHandleItemUseOnEvent(event: ItemUseOnBeforeEvent) {
-  if (isOperator(event.source)) {
+  if (isExemptedUser(event.source)) {
     return;
   }
 
@@ -202,6 +215,20 @@ function logriefRegisterEvents() {
   world.beforeEvents.itemUseOn.subscribe(logriefHandleItemUseOnEvent);
 }
 
-logriefRegisterEvents();
+function logriefInit() {
+  const logriefOptionProperty = world.getDynamicProperty("logrief_options");
+  if (logriefOptionProperty) {
+    options = JSON.parse(logriefOptionProperty as string);
+    console.log(`Logrief: Loaded options as: ${logriefOptionProperty}`);
+  }
+  const logriefExemptedUsersProperty = world.getDynamicProperty("logrief_exempted_users");
+  if (logriefExemptedUsersProperty) {
+    exemptedUsers = new Set<string>(JSON.parse(logriefExemptedUsersProperty as string));
+    console.log(`Logrief: Loaded exempted users as: ${[...exemptedUsers]}`);
+  }
+  logriefRegisterEvents();
+}
+
+logriefInit();
 
 console.log("Logrief enabled...");

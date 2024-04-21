@@ -2,9 +2,9 @@
   "format_version": 2,
   "header": {
     "name": "Logrief behavior pack",
-    "description": "Logrief pack description",
+    "description": "Logrief pack V1.0.1",
     "uuid": "f939258b-12b5-4efc-962d-d59785525dfb",
-    "version": [1, 0, 0],
+    "version": [1, 0, 1],
     "min_engine_version": [1, 20, 60]
   },
   "modules": [
@@ -13,7 +13,7 @@
       "language": "javascript",
       "type": "script",
       "uuid": "0e13f87d-8dae-4750-b2de-7e65b08879d2",
-      "version": [1, 0, 0],
+      "version": [1, 0, 1],
       "entry": "scripts/main.js"
     }
   ],
