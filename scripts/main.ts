@@ -80,7 +80,6 @@ function logriefAdminUI(player: Player) {
         return;
       }
       if (r.formValues) {
-        let keys = Object.keys(options);
         for (let index = 0; index < r.formValues.length; ++index) {
           optionHandlers[index](r.formValues[index]);
         }
