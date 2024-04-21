@@ -58,8 +58,12 @@ function addFormOption(form: ModalFormData, key: string, value: boolean | number
 
 function logriefAdminUI(player: Player) {
   let form = new ModalFormData().title("Logrief controls");
+  let optionHandlers: ((value: any) => void)[] = [];
   for (const [key, value] of Object.entries(options)) {
     addFormOption(form, key, value);
+    optionHandlers.push((val) => {
+      options[key] = val;
+    });
   }
   form
     .show(player)
@@ -70,7 +74,7 @@ function logriefAdminUI(player: Player) {
       if (r.formValues) {
         let keys = Object.keys(options);
         for (let index = 0; index < r.formValues.length; ++index) {
-          options[keys[index]] = r.formValues[index];
+          optionHandlers[index](r.formValues[index]);
         }
       }
     })
