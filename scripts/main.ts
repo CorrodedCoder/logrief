@@ -65,6 +65,14 @@ function logriefAdminUI(player: Player) {
       options[key] = val;
     });
   }
+  form.toggle("No restrictions for me", isExemptedUser(player));
+  optionHandlers.push((val: boolean) => {
+    if (val) {
+      exemptedUserAdd(player);
+    } else {
+      exemptedUserRemove(player);
+    }
+  });
   form
     .show(player)
     .then((r) => {
@@ -84,13 +92,10 @@ function logriefAdminUI(player: Player) {
 }
 
 function logriefHandleAdminEnableEvent(player: Player) {
-  exemptedUserAdd(player);
   system.run(() => logriefAdminUI(player));
 }
 
-function logriefHandleAdminDisableEvent(player: Player) {
-  exemptedUserRemove(player);
-}
+function logriefHandleAdminDisableEvent(player: Player) {}
 
 function isLogriefAdminEnableEvent(event: ItemUseAfterEvent | ItemUseOnAfterEvent): boolean {
   if (event.itemStack.typeId === "minecraft:command_block") {
