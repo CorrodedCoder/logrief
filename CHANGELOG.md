@@ -1,5 +1,22 @@
 # Change Log
 
+## [1.1.0] - 2026-10-04
+
+### Added
+
+- Automatically grant operators a stick named `logrief` on first join when an empty inventory slot is available. Using it opens the admin controls.
+
+### Changed
+
+- Modernized the Bedrock scripting APIs and updated the behavior pack dependencies and minimum engine version.
+- Replaced the previous build workflow with an esbuild-based build and packaging pipeline.
+- Use Bedrock player permission levels to identify operators for admin controls and restriction exemptions.
+
+### Fixed
+
+- Defer loading world dynamic properties until after early execution so the pack can initialize with current Bedrock API restrictions.
+- Allow operators to apply restrictions to themselves by turning off their default restriction exemption.
+
 ## [1.0.1] - 2024-04-21
 
 ### Added

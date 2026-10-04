@@ -1,16 +1,20 @@
 import {
+  Container,
   world,
   system,
   TicksPerSecond,
   Player,
-  ItemUseOnBeforeEvent,
-  ItemUseOnAfterEvent,
+  EntityInventoryComponent,
+  ItemStack,
+  PlayerInteractWithBlockBeforeEvent,
   ItemUseBeforeEvent,
   ItemUseAfterEvent,
+  EntitySpawnAfterEvent,
 } from "@minecraft/server";
 import { ModalFormData } from "@minecraft/server-ui";
 
 let exemptedUsers = new Set<string>();
+let operatorsWithRestrictions = new Set<string>();
 
 const defaultOptions: { [opt: string]: any } = {
   lava_enabled: false,
@@ -36,26 +40,30 @@ function exemptedUserRemove(player: Player) {
   }
 }
 
-function isExemptedUser(player: Player) {
+function isOperator(player: Player) {
   if (!player) {
     return false;
   }
-  // I have no idea if this will actually work.
-  // I'd rather find a compile/transpile time way to detect that
-  // isOp is available and callable with zero parameters
-  if ((player as any)?.isOp?.()) {
-    return true;
+
+  const permissionLevel = player.playerPermissionLevel;
+  return typeof permissionLevel === "number" && permissionLevel >= 2;
+}
+
+function isExemptedUser(player: Player) {
+  if (isOperator(player)) {
+    return !operatorsWithRestrictions.has(player.id);
   }
+
   return exemptedUsers.has(player.name);
 }
 
 function addFormOption(form: ModalFormData, key: string, value: boolean | number | string) {
   if (typeof value === "boolean") {
-    form.toggle(key, value);
+    form.toggle(key, { defaultValue: value });
   } else if (typeof value === "number") {
-    form.slider(key, -1, 60, 1, value);
+    form.slider(key, -1, 60, { defaultValue: value, valueStep: 1 });
   } else if (typeof value === "string") {
-    form.textField(key, value);
+    form.textField(key, "", { defaultValue: value });
   }
 }
 
@@ -72,12 +80,12 @@ function logriefAdminUI(player: Player) {
       }
     });
   }
-  form.toggle("No restrictions for me", isExemptedUser(player));
+  form.toggle("No restrictions for me", { defaultValue: isExemptedUser(player) });
   optionHandlers.push((val: boolean) => {
     if (val) {
-      exemptedUserAdd(player);
+      operatorsWithRestrictions.delete(player.id);
     } else {
-      exemptedUserRemove(player);
+      operatorsWithRestrictions.add(player.id);
     }
   });
   form
@@ -100,17 +108,20 @@ function logriefAdminUI(player: Player) {
     });
 }
 
-function isLogriefAdminEvent(event: ItemUseAfterEvent | ItemUseOnAfterEvent): boolean {
-  if (event.itemStack.typeId === "minecraft:command_block") {
-    if (event.itemStack.nameTag === "logrief") {
-      return true;
-    }
+function isLogriefAdminEvent(player: Player, itemStack: ItemStack | undefined): boolean {
+  if (!itemStack || !isOperator(player)) {
+    return false;
   }
-  return false;
+
+  const isLogriefTool =
+    (itemStack.typeId === "minecraft:command_block" || itemStack.typeId === "minecraft:stick") &&
+    itemStack.nameTag === "logrief";
+
+  return isLogriefTool;
 }
 
 function logriefHandleAdminItemUseEvent(event: ItemUseBeforeEvent) {
-  if (isLogriefAdminEvent(event)) {
+  if (isLogriefAdminEvent(event.source, event.itemStack)) {
     event.cancel = true;
     system.run(() => logriefAdminUI(event.source));
   }
@@ -118,19 +129,19 @@ function logriefHandleAdminItemUseEvent(event: ItemUseBeforeEvent) {
 
 // Because this is a block, without trapping this event, right clicking the command_block
 // will attempt to place it, so we need to stop that happening.
-function logriefHandleAdminItemUseOnEvent(event: ItemUseOnBeforeEvent) {
-  if (isLogriefAdminEvent(event)) {
+function logriefHandleAdminItemUseOnEvent(event: PlayerInteractWithBlockBeforeEvent) {
+  if (isLogriefAdminEvent(event.player, event.itemStack)) {
     event.cancel = true;
   }
 }
 
-function logriefHandleSpawnEgg(event: ItemUseOnBeforeEvent) {
+function logriefHandleSpawnEgg(event: PlayerInteractWithBlockBeforeEvent) {
   const spawnsPerMinute = options["spawns_per_minute"];
   if (spawnsPerMinute < 0) {
     // Unlimited spawning
     return;
   }
-  const player = event.source;
+  const player = event.player;
   if (spawnsPerMinute == 0) {
     event.cancel = true;
     player.sendMessage(`Entity spawning is currently disabled...`);
@@ -163,17 +174,17 @@ function logriefHandleSpawnEgg(event: ItemUseOnBeforeEvent) {
   player.setDynamicProperty("last_spawn_tick", currentTick);
 }
 
-function logriefHandleLavaBucket(event: ItemUseOnBeforeEvent) {
+function logriefHandleLavaBucket(event: PlayerInteractWithBlockBeforeEvent) {
   if (!options["lava_enabled"]) {
     event.cancel = true;
-    event.source.sendMessage(`Lava placement is disabled`);
+    event.player.sendMessage(`Lava placement is disabled`);
   }
 }
 
-function logriefHandleSpawner(event: ItemUseOnBeforeEvent) {
+function logriefHandleSpawner(event: PlayerInteractWithBlockBeforeEvent) {
   if (!options["spawners_enabled"]) {
     event.cancel = true;
-    event.source.sendMessage(`Spawner placement is disabled`);
+    event.player.sendMessage(`Spawner placement is disabled`);
   }
 }
 
@@ -193,42 +204,108 @@ function logriefHandleItemUseEvent(event: ItemUseBeforeEvent) {
   }
 }
 
-function logriefHandleItemUseOnEvent(event: ItemUseOnBeforeEvent) {
-  if (isExemptedUser(event.source)) {
+function logriefHandleItemUseOnEvent(event: PlayerInteractWithBlockBeforeEvent) {
+  if (isExemptedUser(event.player)) {
     return;
   }
 
-  if (event.itemStack.typeId.endsWith("_spawn_egg")) {
+  const itemTypeId = event.itemStack?.typeId;
+  if (!itemTypeId) {
+    return;
+  }
+
+  if (itemTypeId.endsWith("_spawn_egg")) {
     logriefHandleSpawnEgg(event);
-  } else if (event.itemStack.typeId.includes("spawner")) {
+  } else if (itemTypeId.includes("spawner")) {
     logriefHandleSpawner(event);
-  } else if (event.itemStack.typeId === "minecraft:lava_bucket") {
+  } else if (itemTypeId === "minecraft:lava_bucket") {
     logriefHandleLavaBucket(event);
   }
 }
 
+function findLogriefInInventory(inventory: Container): number {
+  for (let slot = 0; slot < inventory.size; slot++) {
+    const item = inventory.getItem(slot);
+    if (item?.typeId === "minecraft:stick" && item.nameTag === "logrief") {
+      return slot;
+    }
+  }
+  return -1;
+}
+
+function findEmptySlotInInventory(inventory: Container): number {
+  for (let slot = 0; slot < inventory.size; slot++) {
+    if (!inventory.getItem(slot)) {
+      return slot;
+    }
+  }
+  return -1;
+}
+
+function createLogriefStick() {
+  const logriefStick = new ItemStack("minecraft:stick");
+  logriefStick.nameTag = "logrief";
+  return logriefStick;
+}
+
+function addLogriefToInventory(player: Player) {
+  if (!isOperator(player)) {
+    return;
+  }
+
+  const inventoryComponent = player.getComponent(EntityInventoryComponent.componentId) as
+    | EntityInventoryComponent
+    | undefined;
+  const inventory = inventoryComponent?.container;
+  if (!inventory) {
+    return;
+  }
+
+  if (findLogriefInInventory(inventory) !== -1) {
+    return;
+  }
+
+  const emptySlot = findEmptySlotInInventory(inventory);
+  if (emptySlot === -1) {
+    return;
+  }
+
+  inventory.setItem(emptySlot, createLogriefStick());
+}
+
 function logriefRegisterEvents() {
   world.beforeEvents.itemUse.subscribe(logriefHandleAdminItemUseEvent);
-  world.beforeEvents.itemUseOn.subscribe(logriefHandleAdminItemUseOnEvent);
+  world.beforeEvents.playerInteractWithBlock.subscribe(logriefHandleAdminItemUseOnEvent);
 
   world.beforeEvents.itemUse.subscribe(logriefHandleItemUseEvent);
-  world.beforeEvents.itemUseOn.subscribe(logriefHandleItemUseOnEvent);
+  world.beforeEvents.playerInteractWithBlock.subscribe(logriefHandleItemUseOnEvent);
+
+  world.afterEvents.playerSpawn.subscribe((event) => {
+    if (event.initialSpawn) {
+      addLogriefToInventory(event.player);
+    }
+  });
+
+  world.afterEvents.playerLeave.subscribe((event) => {
+    operatorsWithRestrictions.delete(event.playerId);
+  });
 }
 
 function logriefInit() {
-  const logriefOptionProperty = world.getDynamicProperty("logrief_options");
-  if (logriefOptionProperty) {
-    options = JSON.parse(logriefOptionProperty as string);
-    console.log(`Logrief: Loaded options as: ${logriefOptionProperty}`);
-  }
-  const logriefExemptedUsersProperty = world.getDynamicProperty("logrief_exempted_users");
-  if (logriefExemptedUsersProperty) {
-    exemptedUsers = new Set<string>(JSON.parse(logriefExemptedUsersProperty as string));
-    console.log(`Logrief: Loaded exempted users as: ${[...exemptedUsers]}`);
-  }
-  logriefRegisterEvents();
+  system.run(() => {
+    const logriefOptionProperty = world.getDynamicProperty("logrief_options");
+    if (logriefOptionProperty) {
+      options = JSON.parse(logriefOptionProperty as string);
+      console.log(`Logrief: Loaded options as: ${logriefOptionProperty}`);
+    }
+    const logriefExemptedUsersProperty = world.getDynamicProperty("logrief_exempted_users");
+    if (logriefExemptedUsersProperty) {
+      exemptedUsers = new Set<string>(JSON.parse(logriefExemptedUsersProperty as string));
+      console.log(`Logrief: Loaded exempted users as: ${[...exemptedUsers]}`);
+    }
+    logriefRegisterEvents();
+    console.log("Logrief enabled...");
+  });
 }
 
 logriefInit();
-
-console.log("Logrief enabled...");

@@ -2,10 +2,10 @@
   "format_version": 2,
   "header": {
     "name": "Logrief behavior pack",
-    "description": "Logrief pack V1.0.1",
+    "description": "Logrief pack V1.1.0",
     "uuid": "f939258b-12b5-4efc-962d-d59785525dfb",
-    "version": [1, 0, 1],
-    "min_engine_version": [1, 20, 60]
+    "version": [1, 1, 0],
+    "min_engine_version": [1, 21, 100]
   },
   "modules": [
     {
@@ -13,18 +13,18 @@
       "language": "javascript",
       "type": "script",
       "uuid": "0e13f87d-8dae-4750-b2de-7e65b08879d2",
-      "version": [1, 0, 1],
+      "version": [1, 1, 0],
       "entry": "scripts/main.js"
     }
   ],
   "dependencies": [
     {
       "module_name": "@minecraft/server",
-      "version": "1.8.0"
+      "version": "2.1.0"
     },
     {
       "module_name": "@minecraft/server-ui",
-      "version": "1.1.0"
+      "version": "2.0.0"
     }
   ]
 }
