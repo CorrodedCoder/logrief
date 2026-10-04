@@ -36,11 +36,15 @@ The add-on should be generated as dist/packages/logrief.mcaddon
 **Note**: On Windows, you might need to run the following command under PowerShell in the repository directory before the NPM steps:
 `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`
 
-## Developer convenience
+## Building and development
 
-The infrastructure to build/deploy this add-on was taken from Microsoft's minecraft-scripting-samples and so the [instructions for it](https://github.com/microsoft/minecraft-scripting-samples/blob/main/ts-starter/README.md) may be used here as well.
+This project uses a lightweight `esbuild`-based build script instead of the older Microsoft scripting starter workflow.
 
-Specifically you can also run the following command to on Windows to have the add-on build and deliver to your Minecraft client:
-`npm run local-deploy`
+For local development, use:
 
-This is a better option than creating and installing the logrief.mcaddon file directly if you plan to be developing with it since it will update the logrief add-on. If you're going to do this and have already installed the add-on using the logrief.mcaddon file then you may want to remove that from your Minecraft client first before using the local deploy.
+- `npm install`
+- `npm run build` to generate the bundled script in `dist/scripts`
+- `npm run dev` to watch for source changes and rebuild automatically
+- `npm run mcaddon` to produce the final Bedrock package at `dist/packages/logrief.mcaddon`
+
+For end users wanting to experiment in a single player world, import the generated `.mcaddon` file from `dist/packages/logrief.mcaddon`.
