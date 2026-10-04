@@ -102,15 +102,20 @@ function logriefAdminUI(player: Player) {
     });
 }
 
-function isLogriefAdminEvent(itemStack: ItemStack | undefined): boolean {
-  if (itemStack?.typeId === "minecraft:command_block" && itemStack.nameTag === "logrief") {
-    return true;
+function isLogriefAdminEvent(player: Player, itemStack: ItemStack | undefined): boolean {
+  if (!itemStack || !isExemptedUser(player)) {
+    return false;
   }
-  return false;
+
+  const isLogriefTool =
+    (itemStack.typeId === "minecraft:command_block" || itemStack.typeId === "minecraft:stick") &&
+    itemStack.nameTag === "logrief";
+
+  return isLogriefTool;
 }
 
 function logriefHandleAdminItemUseEvent(event: ItemUseBeforeEvent) {
-  if (isLogriefAdminEvent(event.itemStack)) {
+  if (isLogriefAdminEvent(event.source, event.itemStack)) {
     event.cancel = true;
     system.run(() => logriefAdminUI(event.source));
   }
@@ -119,7 +124,7 @@ function logriefHandleAdminItemUseEvent(event: ItemUseBeforeEvent) {
 // Because this is a block, without trapping this event, right clicking the command_block
 // will attempt to place it, so we need to stop that happening.
 function logriefHandleAdminItemUseOnEvent(event: PlayerInteractWithBlockBeforeEvent) {
-  if (isLogriefAdminEvent(event.itemStack)) {
+  if (isLogriefAdminEvent(event.player, event.itemStack)) {
     event.cancel = true;
   }
 }
