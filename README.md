@@ -16,13 +16,15 @@ A demonstration of the features can be seen at https://youtu.be/SmusZ_KXlik
 2. (Optionally) Prevent placement of mob_spawners.
 3. (Optionally) Prevent use of potions (such as invisibility).
 4. (Optionally) Limit the rate at which mobs may be spawned by spawn eggs or disable their use entirely.
-5. Operator only UI for in game configuration of the restrictions.
+5. Operator-only in-game configuration of the restrictions, opened with the automatically granted `logrief` stick.
+
+On an operator's first join, the stick is added to the first available inventory slot. It is not added if the inventory is full or the player already has one. Restriction exemptions do not grant access to the admin controls.
 
 See [instructions](docs/Instructions.md) for further details of how to install and use the add-on.
 
 ## Pre-requisites to build the add-on
 
-[Install NodeJS](https://nodejs.org/en)
+[Install Node.js 20 or later](https://nodejs.org/en)
 
 ## Building the add-on
 

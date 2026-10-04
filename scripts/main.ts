@@ -14,6 +14,7 @@ import {
 import { ModalFormData } from "@minecraft/server-ui";
 
 let exemptedUsers = new Set<string>();
+let operatorsWithRestrictions = new Set<string>();
 
 const defaultOptions: { [opt: string]: any } = {
   lava_enabled: false,
@@ -39,14 +40,18 @@ function exemptedUserRemove(player: Player) {
   }
 }
 
-function isExemptedUser(player: Player) {
+function isOperator(player: Player) {
   if (!player) {
     return false;
   }
 
   const permissionLevel = player.playerPermissionLevel;
-  if (typeof permissionLevel === "number" && permissionLevel >= 2) {
-    return true;
+  return typeof permissionLevel === "number" && permissionLevel >= 2;
+}
+
+function isExemptedUser(player: Player) {
+  if (isOperator(player)) {
+    return !operatorsWithRestrictions.has(player.id);
   }
 
   return exemptedUsers.has(player.name);
@@ -78,9 +83,9 @@ function logriefAdminUI(player: Player) {
   form.toggle("No restrictions for me", { defaultValue: isExemptedUser(player) });
   optionHandlers.push((val: boolean) => {
     if (val) {
-      exemptedUserAdd(player);
+      operatorsWithRestrictions.delete(player.id);
     } else {
-      exemptedUserRemove(player);
+      operatorsWithRestrictions.add(player.id);
     }
   });
   form
@@ -104,7 +109,7 @@ function logriefAdminUI(player: Player) {
 }
 
 function isLogriefAdminEvent(player: Player, itemStack: ItemStack | undefined): boolean {
-  if (!itemStack || !isExemptedUser(player)) {
+  if (!itemStack || !isOperator(player)) {
     return false;
   }
 
@@ -244,7 +249,7 @@ function createLogriefStick() {
 }
 
 function addLogriefToInventory(player: Player) {
-  if (!isExemptedUser(player)) {
+  if (!isOperator(player)) {
     return;
   }
 
@@ -279,6 +284,10 @@ function logriefRegisterEvents() {
     if (event.initialSpawn) {
       addLogriefToInventory(event.player);
     }
+  });
+
+  world.afterEvents.playerLeave.subscribe((event) => {
+    operatorsWithRestrictions.delete(event.playerId);
   });
 }
 
