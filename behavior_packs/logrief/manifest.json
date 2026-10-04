@@ -5,7 +5,7 @@
     "description": "Logrief pack V1.0.1",
     "uuid": "f939258b-12b5-4efc-962d-d59785525dfb",
     "version": [1, 0, 1],
-    "min_engine_version": [1, 20, 60]
+    "min_engine_version": [1, 21, 100]
   },
   "modules": [
     {
@@ -20,11 +20,11 @@
   "dependencies": [
     {
       "module_name": "@minecraft/server",
-      "version": "1.8.0"
+      "version": "2.1.0"
     },
     {
       "module_name": "@minecraft/server-ui",
-      "version": "1.1.0"
+      "version": "2.0.0"
     }
   ]
 }

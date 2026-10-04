@@ -9,6 +9,7 @@ import {
   PlayerInteractWithBlockBeforeEvent,
   ItemUseBeforeEvent,
   ItemUseAfterEvent,
+  EntitySpawnAfterEvent,
 } from "@minecraft/server";
 import { ModalFormData } from "@minecraft/server-ui";
 
@@ -282,19 +283,20 @@ function logriefRegisterEvents() {
 }
 
 function logriefInit() {
-  const logriefOptionProperty = world.getDynamicProperty("logrief_options");
-  if (logriefOptionProperty) {
-    options = JSON.parse(logriefOptionProperty as string);
-    console.log(`Logrief: Loaded options as: ${logriefOptionProperty}`);
-  }
-  const logriefExemptedUsersProperty = world.getDynamicProperty("logrief_exempted_users");
-  if (logriefExemptedUsersProperty) {
-    exemptedUsers = new Set<string>(JSON.parse(logriefExemptedUsersProperty as string));
-    console.log(`Logrief: Loaded exempted users as: ${[...exemptedUsers]}`);
-  }
-  logriefRegisterEvents();
+  system.run(() => {
+    const logriefOptionProperty = world.getDynamicProperty("logrief_options");
+    if (logriefOptionProperty) {
+      options = JSON.parse(logriefOptionProperty as string);
+      console.log(`Logrief: Loaded options as: ${logriefOptionProperty}`);
+    }
+    const logriefExemptedUsersProperty = world.getDynamicProperty("logrief_exempted_users");
+    if (logriefExemptedUsersProperty) {
+      exemptedUsers = new Set<string>(JSON.parse(logriefExemptedUsersProperty as string));
+      console.log(`Logrief: Loaded exempted users as: ${[...exemptedUsers]}`);
+    }
+    logriefRegisterEvents();
+    console.log("Logrief enabled...");
+  });
 }
 
 logriefInit();
-
-console.log("Logrief enabled...");
